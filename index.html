@@ -1,186 +1,30 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Shadertoy Embed</title>
-    <style>
-      body {
-        padding: 0;
-        margin: 0;
-        overflow: hidden;
-        height: 100vh;
-        width: 100vw;
-      }
-      iframe {
-        width: 100%;
-        height: 100%;
-      }
-      canvas {
-        width: 65%;
-        height: 65%;
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        margin: auto;
-        z-index: 1;
-      }
-      a {
-        color: #fff;
-      }
-      .message {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        width: 100%;
-        color: #fff;
-        font-size: 20px;
-        text-align: center;
-      }
-    </style>
-  </head>
-  <body>
-    <script>
-      start();
 
-      function start() {
-        const params = new URL(window.location.href).searchParams;
-        const shader = params.get("shader") || "Wt33Wf";
-        const processor = params.get("processor");
-        const kraken = params.get("kraken");
+<head>
+  <title>ShaderToy Kraken</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 
-        if (!kraken) {
-          const message = document.createElement("div");
-          message.setAttribute("class", "message");
-          message.innerHTML = `
-                    <h3>Display shaders from <a target="_blank" href="https://shadertoy.com/browse">shadertoy.com<a> on Kraken</h3>
-                    <br/>
-                    <p>Choose a shader and replace shader=id</p>
-                    <p>For temperature monitoring choose processor=gpu or cpu</p>
-                `;
-          document.body.style.backgroundColor = "#404040";
-          document.body.appendChild(message);
-          return;
-        }
+<body>
+  <div id="kraken" class="kraken-container">
+    <div id="shadertoy-container" class="shadertoy-container">
+      <iframe id="shader" frameborder="0"></iframe>
+    </div>
 
-        const viewstateCookie = document.cookie
-          ?.split("; ")
-          .find((row) => row.startsWith("viewstate="))
-          ?.split("=")[1];
-        const viewstate = viewstateCookie ? parseInt(viewstateCookie) : 640;
+    <canvas id="canvas"></canvas>
+  </div>
 
-        const iframe = document.createElement("iframe");
-        iframe.setAttribute("frameborder", "0");
-        iframe.setAttribute(
-          "src",
-          `https://www.shadertoy.com/embed/${shader}?gui=false&paused=false&muted=true`
-        );
-        document.body.appendChild(iframe);
+  <div id="message" class="message">
+    <h3>Display shaders from <a target="_blank" href="https://shadertoy.com/browse">shadertoy.com</a> on NZXT Kraken</h3>
+    <br />
+    <p>Choose a shader and append <b>shader</b> as a get paremeter with your id as value</p>
+    <p>For temperature monitoring add <b>processor</b> as a get parameter with either cpu or gpu as value</p>
 
-        const canvas = document.createElement("canvas");
-        canvas.setAttribute("id", "canvas");
-        canvas.setAttribute("width", viewstate);
-        canvas.setAttribute("height", viewstate);
-        document.body.appendChild(canvas);
+    <br>
+    <p>Example: ?shader=4dX3Rn&processor=cpu</p>
+  </div>
 
-        function drawGauge(normalizedTemperature) {
-          const canvas = document.getElementById("canvas");
-          const ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          const centerX = canvas.width / 2;
-          const centerY = canvas.height / 2;
-          const radius = canvas.width * 0.4;
-          const gaugeAngle = normalizedTemperature * 2 * Math.PI;
-          const startAngle = (2 * Math.PI) / 4;
-          const endAngle = gaugeAngle + startAngle;
-
-          ctx.moveTo(centerX, centerY);
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
-
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = viewstate / 25;
-          ctx.lineCap = "round";
-          ctx.stroke();
-
-          const temperature = Math.floor(normalizedTemperature * 100);
-          ctx.fillStyle = "#fff";
-          ctx.font = `${viewstate / 4}px 'Gotham Black', sans-serif`;
-          ctx.fontWeight = "lighter";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(`${temperature}`, centerX - viewstate / 25, centerY);
-
-          ctx.font = `${viewstate / 8}px 'Gotham Black', sans-serif`;
-          if (temperature < 10) {
-            ctx.fillText(
-              "°",
-              centerX + viewstate / 12,
-              centerY - viewstate / 20
-            );
-          } else if (temperature < 100) {
-            ctx.fillText(
-              "°",
-              centerX + viewstate / 6,
-              centerY - viewstate / 20
-            );
-          } else {
-            ctx.fillText(
-              "°",
-              centerX + viewstate / 4,
-              centerY - viewstate / 20
-            );
-          }
-        }
-        
-        let animationId = null;
-        let previousNormalized = 0;
-
-        function animateGauge(currentNormalized, previousNormalized) {
-          if (previousNormalized === currentNormalized) return;
-
-          if (animationId) {
-            window.cancelAnimationFrame(animationId);
-          }
-
-          const step = (currentNormalized - previousNormalized) / 15;
-
-          function updateGauge() {
-            previousNormalized += step;
-            drawGauge(previousNormalized);
-
-            if (
-              (step > 0 && previousNormalized < currentNormalized) ||
-              (step < 0 && previousNormalized > currentNormalized)
-            ) {
-              animationId = window.requestAnimationFrame(updateGauge);
-            }
-          }
-
-          animationId = window.requestAnimationFrame(updateGauge);
-        }
-
-        window.nzxt = {
-          v1: {
-            onMonitoringDataUpdate: (pc) => {
-              if (!processor) return;
-              const processingUnit =
-                processor === "gpu" ? pc.gpus[0] : pc.cpus[0];
-              const temperature = Math.floor(processingUnit.temperature);
-              const minTemperature = 0;
-              const maxTemperature = 100;
-              const normalized =
-                (temperature - minTemperature) /
-                (maxTemperature - minTemperature);
-              animateGauge(normalized, previousNormalized);
-              previousNormalized = normalized;
-            },
-          },
-        };
-      }
-    </script>
-  </body>
+  <script src="main.js"></script>
+</body>
 </html>
