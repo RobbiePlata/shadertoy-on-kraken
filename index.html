@@ -49,6 +49,7 @@
         const params = new URL(window.location.href).searchParams;
         const shader = params.get("shader") || "Wt33Wf";
         const processor = params.get("processor");
+        const target = params.get("target");
         const kraken = params.get("kraken");
 
         if (!kraken) {
@@ -58,7 +59,7 @@
                     <h3>Display shaders from <a target="_blank" href="https://shadertoy.com/browse">shadertoy.com<a> on Kraken</h3>
                     <br/>
                     <p>Choose a shader and replace shader=id</p>
-                    <p>For temperature monitoring choose processor=gpu or cpu</p>
+                    <p>For monitoring choose processor=cpu or processor=gpu and optional target=temperature (dafault) or target=load</p>
                 `;
           document.body.style.backgroundColor = "#404040";
           document.body.appendChild(message);
@@ -115,27 +116,28 @@
           ctx.fillText(`${temperature}`, centerX - viewstate / 25, centerY);
 
           ctx.font = `${viewstate / 8}px 'Gotham Black', sans-serif`;
+          const targetUnit = target === "load" ? "%" : "°";
           if (temperature < 10) {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 12,
               centerY - viewstate / 20
             );
           } else if (temperature < 100) {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 6,
               centerY - viewstate / 20
             );
           } else {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 4,
               centerY - viewstate / 20
             );
           }
         }
-        
+
         let animationId = null;
         let previousNormalized = 0;
 
@@ -169,12 +171,11 @@
               if (!processor) return;
               const processingUnit =
                 processor === "gpu" ? pc.gpus[0] : pc.cpus[0];
-              const temperature = Math.floor(processingUnit.temperature);
-              const minTemperature = 0;
-              const maxTemperature = 100;
-              const normalized =
-                (temperature - minTemperature) /
-                (maxTemperature - minTemperature);
+              const value =
+                target === "load" ? processingUnit.load : processingUnit.temperature;
+              const minValue = 0;
+              const maxValue = target === "load" ? 1 : 100;
+              const normalized = (value - minValue) / (maxValue - minValue);
               animateGauge(normalized, previousNormalized);
               previousNormalized = normalized;
             },
