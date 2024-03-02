@@ -116,21 +116,22 @@
           ctx.fillText(`${temperature}`, centerX - viewstate / 25, centerY);
 
           ctx.font = `${viewstate / 8}px 'Gotham Black', sans-serif`;
+          const targetUnit = target === "load" ? "%" : "°";
           if (temperature < 10) {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 12,
               centerY - viewstate / 20
             );
           } else if (temperature < 100) {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 6,
               centerY - viewstate / 20
             );
           } else {
             ctx.fillText(
-              "°",
+              targetUnit,
               centerX + viewstate / 4,
               centerY - viewstate / 20
             );
